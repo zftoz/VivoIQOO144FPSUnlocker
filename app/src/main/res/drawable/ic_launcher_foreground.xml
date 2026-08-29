@@ -1,8 +1,43 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/origin_tweaks_icon_1787995452395"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Center Accent Badge -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M54,28 C68.36,28 80,39.64 80,54 C80,68.36 68.36,80 54,80 C39.64,80 28,68.36 28,54 C28,39.64 39.64,28 54,28 Z" />
+
+    <!-- Cyan Border Circle -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2"
+        android:pathData="M54,28 C68.36,28 80,39.64 80,54 C80,68.36 68.36,80 54,80 C39.64,80 28,68.36 28,54 C28,39.64 39.64,28 54,28 Z" />
+
+    <!-- Modern 144 Vector Glyphs -->
+    <!-- Digit '1' -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M37,42 L41.5,39 L41.5,60 L38,60 L38,44 L36,45.5 Z" />
+
+    <!-- Digit '4' (First) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M48,53 L54.5,53 L54.5,60 L51.5,60 L51.5,55.5 L46,55.5 L46,52.5 L51,40 L54.5,40 L48,53 Z" />
+
+    <!-- Digit '4' (Second) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M60,53 L66.5,53 L66.5,60 L63.5,60 L63.5,55.5 L58,55.5 L58,52.5 L63,40 L66.5,40 L60,53 Z" />
+
+    <!-- 'HZ' Badge -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M70,48h1.2v2.2h2.4v-2.2h1.2v5.5h-1.2v-2.3h-2.4v2.3H70V48z M75.8,48h4.5v1l-3.2,3.5h3.3v1h-4.7v-1l3.2,-3.5h-3.1V48z" />
+
+    <!-- Speed Sparkle / Lightning Bolt -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M52,24 L56,24 L53,30 L57,30 L49,40 L51,33 L48,33 Z" />
+</vector>

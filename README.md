@@ -36,10 +36,13 @@
 ## Автоматическая сборка через GitHub Actions
 
 В репозитории настроен GitHub Actions workflow (`.github/workflows/build_apk.yml`):
-- **При каждом коммите/пуше в ветку `main` или `master`** автоматически запускается сборка APK (Debug и Release).
-- **Ручной запуск**: Перейдите во вкладку **Actions** в вашем репозитории на GitHub -> выберите workflow **"Build and Package APK"** -> нажмите **"Run workflow"**.
-- **Скачивание собранного APK**: После завершения сборки перейдите в запущенный workflow и в блоке **Artifacts** скачайте архив `VivoIQOO144FPSUnlocker-APKs` с готовыми файлами `.apk`.
-- **Релизы**: При создании тега (например, `v2.0`) или публикации релиза APK автоматически прикрепляются к GitHub Releases.
+- **Сборка исключительно Release APK**: При каждом коммите/пуше в ветку `main` или `master` собирается подписанный `VivoIQOO144FPSUnlocker-release.apk`.
+- **Ручной запуск**: Вкладка **Actions** -> **Build and Package Release APK** -> **Run workflow**.
+- **Скачивание готового APK**: В блоке **Artifacts** доступен архив `VivoIQOO144FPSUnlocker-Release-APK`.
+- **Релизы**: При создании тега (например, `v2.0`) APK автоматически публикуется в GitHub Releases.
+
+## Shizuku API (ADB без ПК)
+Приложение поддерживает официальный запрос прав через Shizuku. При нажатии на кнопку запроса прав открывается системное всплывающее окно Shizuku, позволяющее в 1 клик выдать необходимые разрешения `WRITE_SECURE_SETTINGS` без подключения смартфона к ПК по кабелю.
 
 ## Разрешения
 - `android.permission.WRITE_SETTINGS` - изменение системных настроек

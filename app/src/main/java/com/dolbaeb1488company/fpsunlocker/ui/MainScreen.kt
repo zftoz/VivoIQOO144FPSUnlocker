@@ -1,11 +1,13 @@
 package com.dolbaeb1488company.fpsunlocker.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,7 +38,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,6 +61,8 @@ fun MainScreen(
     displayRefreshRate: Float,
     supportedRefreshRates: List<Float>,
     isServiceRunning: Boolean,
+    isShizukuAvailable: Boolean,
+    hasShizukuPermission: Boolean,
     musicApps: List<String>,
     fingerprintIcons: List<String>,
     installedApps: List<InstalledAppItem>,
@@ -69,6 +72,8 @@ fun MainScreen(
     onSetCustomValue: (String) -> Unit,
     onToggleService: (Boolean) -> Unit,
     onRefreshPermission: () -> Unit,
+    onRequestShizukuPermission: () -> Unit,
+    onShizukuGrantedSuccess: () -> Unit,
     onSaveMusicApps: (List<String>) -> Unit,
     onSaveFingerprintIcons: (List<String>) -> Unit
 ) {
@@ -157,7 +162,16 @@ fun MainScreen(
         ) {
             AnimatedContent(
                 targetState = selectedNavIndex,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = {
+                    val duration = 300
+                    if (targetState > initialState) {
+                        (slideInHorizontally(animationSpec = tween(duration)) { width -> width / 3 } + fadeIn(animationSpec = tween(duration)))
+                            .togetherWith(slideOutHorizontally(animationSpec = tween(duration)) { width -> -width / 3 } + fadeOut(animationSpec = tween(duration)))
+                    } else {
+                        (slideInHorizontally(animationSpec = tween(duration)) { width -> -width / 3 } + fadeIn(animationSpec = tween(duration)))
+                            .togetherWith(slideOutHorizontally(animationSpec = tween(duration)) { width -> width / 3 } + fadeOut(animationSpec = tween(duration)))
+                    }
+                },
                 label = "navigation_content"
             ) { target ->
                 when (target) {
@@ -179,7 +193,12 @@ fun MainScreen(
                         onSaveMusicApps = onSaveMusicApps,
                         onSaveFingerprintIcons = onSaveFingerprintIcons
                     )
-                    2 -> AdbToolsScreen()
+                    2 -> AdbToolsScreen(
+                        isShizukuAvailable = isShizukuAvailable,
+                        hasShizukuPermission = hasShizukuPermission,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onShizukuGrantedSuccess = onShizukuGrantedSuccess
+                    )
                     3 -> DeviceInfoScreen(
                         displayRefreshRate = displayRefreshRate,
                         supportedRefreshRates = supportedRefreshRates

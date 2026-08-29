@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.Display
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -25,6 +24,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import com.dolbaeb1488company.fpsunlocker.model.InstalledAppItem
 import com.dolbaeb1488company.fpsunlocker.model.OriginSettingsConstants
+import com.dolbaeb1488company.fpsunlocker.shizuku.ShizukuManager
 import com.dolbaeb1488company.fpsunlocker.theme.OriginTweaksTheme
 import com.dolbaeb1488company.fpsunlocker.ui.MainScreen
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +40,10 @@ class MainActivity : ComponentActivity() {
     private var supportedRefreshRates = mutableStateListOf<Float>()
     private var isServiceRunning by mutableStateOf(false)
     private var isFirstRun by mutableStateOf(false)
+
+    // Shizuku State
+    private var isShizukuAvailable by mutableStateOf(false)
+    private var hasShizukuPermission by mutableStateOf(false)
 
     private val musicAppsList = mutableStateListOf<String>()
     private val fingerprintIconsList = mutableStateListOf<String>()
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
         detectDisplayCapabilities()
         readSystemSettings()
         loadInstalledApps()
+        setupShizukuLifecycle()
 
         // Start service if requested or enabled
         try {
@@ -89,6 +94,8 @@ class MainActivity : ComponentActivity() {
                     displayRefreshRate = displayRefreshRate,
                     supportedRefreshRates = supportedRefreshRates.toList(),
                     isServiceRunning = isServiceRunning,
+                    isShizukuAvailable = isShizukuAvailable,
+                    hasShizukuPermission = hasShizukuPermission,
                     musicApps = musicAppsList.toList(),
                     fingerprintIcons = fingerprintIconsList.toList(),
                     installedApps = installedAppsList.toList(),
@@ -101,6 +108,11 @@ class MainActivity : ComponentActivity() {
                     onSetCustomValue = { value -> applyCustomFpsSetting(value) },
                     onToggleService = { enable -> toggleBackgroundService(enable) },
                     onRefreshPermission = { checkPermissions() },
+                    onRequestShizukuPermission = { requestShizukuAuth() },
+                    onShizukuGrantedSuccess = {
+                        checkPermissions()
+                        readSystemSettings()
+                    },
                     onSaveMusicApps = { list -> saveMusicApps(list) },
                     onSaveFingerprintIcons = { list -> saveFingerprintIcons(list) }
                 )
@@ -108,10 +120,52 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun setupShizukuLifecycle() {
+        isShizukuAvailable = ShizukuManager.isShizukuAvailable()
+        hasShizukuPermission = ShizukuManager.hasPermission()
+
+        ShizukuManager.registerListeners(
+            onBinderReceived = {
+                isShizukuAvailable = true
+                hasShizukuPermission = ShizukuManager.hasPermission()
+            },
+            onBinderDead = {
+                isShizukuAvailable = false
+                hasShizukuPermission = false
+            },
+            onPermissionResult = { granted ->
+                hasShizukuPermission = granted
+                if (granted) {
+                    Toast.makeText(this, "Shizuku: ADB доступ получен!", Toast.LENGTH_SHORT).show()
+                    lifecycleScope.launch {
+                        ShizukuManager.grantWriteSecureSettings(this@MainActivity)
+                        checkPermissions()
+                        readSystemSettings()
+                    }
+                } else {
+                    Toast.makeText(this, "Shizuku: Запрос прав отклонён", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    private fun requestShizukuAuth() {
+        if (!ShizukuManager.isShizukuAvailable()) {
+            Toast.makeText(this, "Сервер Shizuku не найден или не запущен", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val sent = ShizukuManager.requestPermission()
+        if (!sent) {
+            Toast.makeText(this, "Не удалось открыть диалог Shizuku", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         checkPermissions()
         readSystemSettings()
+        isShizukuAvailable = ShizukuManager.isShizukuAvailable()
+        hasShizukuPermission = ShizukuManager.hasPermission()
     }
 
     override fun onDestroy() {
@@ -120,6 +174,7 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.w("FPSUnlocker", "Receiver not registered or already unregistered", e)
         }
+        ShizukuManager.unregisterListeners()
         super.onDestroy()
     }
 

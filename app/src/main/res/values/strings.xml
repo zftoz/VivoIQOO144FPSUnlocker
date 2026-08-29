@@ -67,6 +67,17 @@
     <string name="notification_title">OriginOS Tweaks Active</string>
     <string name="notification_content">144 FPS Status: %s</string>
     
+    <!-- Shizuku Integration -->
+    <string name="shizuku_card_title">Shizuku API Integration</string>
+    <string name="shizuku_status_running">Shizuku Service Running</string>
+    <string name="shizuku_status_stopped">Shizuku Service Not Detected</string>
+    <string name="shizuku_perm_granted">ADB Access Granted (UID 2000)</string>
+    <string name="shizuku_perm_required">ADB Authorization Required</string>
+    <string name="shizuku_request_perm">Request Shizuku Permission</string>
+    <string name="shizuku_grant_auto">Grant Secure Settings via Shizuku</string>
+    <string name="shizuku_test_command">Run Live ADB Command Test</string>
+    <string name="shizuku_dialog_prompt">Shizuku authorization dialog will open. Click \"Allow\" to authorize ADB Binder access.</string>
+
     <!-- ADB & Tools -->
     <string name="adb_guide_title">ADB &amp; Root Permissions</string>
     <string name="adb_guide_desc">Execute this command via ADB or Shizuku to grant Secure Settings access:</string>

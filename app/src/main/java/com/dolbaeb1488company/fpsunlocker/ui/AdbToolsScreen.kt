@@ -4,11 +4,16 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,43 +30,67 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatterySaver
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ElectricBolt
 import androidx.compose.material.icons.rounded.Launch
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material.icons.rounded.VpnKey
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.dolbaeb1488company.fpsunlocker.R
+import com.dolbaeb1488company.fpsunlocker.shizuku.ShizukuManager
 import com.dolbaeb1488company.fpsunlocker.theme.AccentCyan
+import com.dolbaeb1488company.fpsunlocker.theme.AccentGreen
 import com.dolbaeb1488company.fpsunlocker.theme.AccentOrange
-import com.dolbaeb1488company.fpsunlocker.theme.AccentPurple
+import kotlinx.coroutines.launch
 
 @Composable
-fun AdbToolsScreen() {
+fun AdbToolsScreen(
+    isShizukuAvailable: Boolean,
+    hasShizukuPermission: Boolean,
+    onRequestShizukuPermission: () -> Unit,
+    onShizukuGrantedSuccess: () -> Unit
+) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val pkgName = context.packageName
 
     val adbCommand = "adb shell pm grant $pkgName android.permission.WRITE_SECURE_SETTINGS"
-    val adbCommandSettings = "adb shell pm grant $pkgName android.permission.WRITE_SETTINGS"
+    
+    var commandOutput by remember { mutableStateOf<String?>(null) }
+    var isExecutingCommand by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -73,7 +102,207 @@ fun AdbToolsScreen() {
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // ADB Permission Card
+        // ==========================================
+        // 1. Shizuku API Official Dialog Request Card
+        // ==========================================
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(spring(stiffness = Spring.StiffnessLow))
+                    .testTag("shizuku_main_card"),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (hasShizukuPermission) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    } else {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                    }
+                )
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(if (hasShizukuPermission) AccentGreen.copy(alpha = 0.18f) else AccentCyan.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (hasShizukuPermission) Icons.Rounded.CheckCircle else Icons.Rounded.ElectricBolt,
+                                    contentDescription = null,
+                                    tint = if (hasShizukuPermission) AccentGreen else AccentCyan
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.shizuku_card_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isShizukuAvailable) stringResource(R.string.shizuku_status_running) else stringResource(R.string.shizuku_status_stopped),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isShizukuAvailable) AccentGreen else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Permission Status Badge
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (hasShizukuPermission) AccentGreen.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                            )
+                            .padding(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (hasShizukuPermission) Icons.Rounded.Security else Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = if (hasShizukuPermission) AccentGreen else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (hasShizukuPermission) stringResource(R.string.shizuku_perm_granted) else stringResource(R.string.shizuku_perm_required),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (hasShizukuPermission) AccentGreen else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (!hasShizukuPermission) {
+                        Text(
+                            text = stringResource(R.string.shizuku_dialog_prompt),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = {
+                                if (isShizukuAvailable) {
+                                    onRequestShizukuPermission()
+                                } else {
+                                    Toast.makeText(context, "Запустите Shizuku через Wi-Fi отладку или Root", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("request_shizuku_btn"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isShizukuAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        ) {
+                            Icon(Icons.Rounded.VpnKey, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.shizuku_request_perm), fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        // When permission is active: 1-Click Grant & Test Execution
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        isExecutingCommand = true
+                                        val res = ShizukuManager.grantWriteSecureSettings(context)
+                                        isExecutingCommand = false
+                                        if (res.isSuccess) {
+                                            commandOutput = "Разрешения WRITE_SECURE_SETTINGS успешно выданы приложению через Shizuku!"
+                                            Toast.makeText(context, "Права успешно активированы!", Toast.LENGTH_SHORT).show()
+                                            onShizukuGrantedSuccess()
+                                        } else {
+                                            commandOutput = "Ошибка: ${res.exceptionOrNull()?.message}"
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.ElectricBolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Выдать права", fontSize = 13.sp)
+                            }
+
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        isExecutingCommand = true
+                                        val testCmd = "id && settings get global adb_enabled && getprop ro.build.version.release"
+                                        val res = ShizukuManager.execShellCommand(testCmd)
+                                        isExecutingCommand = false
+                                        commandOutput = if (res.isSuccess) {
+                                            "Выполнено с правами ADB (UID 2000):\n${res.getOrNull()}"
+                                        } else {
+                                            "Ошибка: ${res.exceptionOrNull()?.message}"
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                if (isExecutingCommand) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Тест команды", fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        commandOutput?.let { out ->
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = out,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = if (out.startsWith("Ошибка")) MaterialTheme.colorScheme.error else AccentGreen
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. Manual ADB Shell Commands Card
+        // ==========================================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -101,7 +330,7 @@ fun AdbToolsScreen() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Shizuku / ADB Shell Setup",
+                                text = "Альтернатива через ПК / USB Debugging",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -155,7 +384,9 @@ fun AdbToolsScreen() {
             }
         }
 
-        // Battery Optimization & Background Execution
+        // ==========================================
+        // 3. Battery Optimization & Background Execution
+        // ==========================================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -221,7 +452,9 @@ fun AdbToolsScreen() {
             }
         }
 
-        // Links & Resources
+        // ==========================================
+        // 4. Links & Resources
+        // ==========================================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
