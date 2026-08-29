@@ -1,7 +1,19 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.kotlin.compose)
+}
+
+val rootKeystoreFile = file("${rootDir}/debug.keystore")
+val rootKeystoreBase64File = file("${rootDir}/debug.keystore.base64")
+if (!rootKeystoreFile.exists() && rootKeystoreBase64File.exists()) {
+    try {
+        val decoded = Base64.getDecoder().decode(rootKeystoreBase64File.readText().trim())
+        rootKeystoreFile.writeBytes(decoded)
+    } catch (_: Exception) {
+    }
 }
 
 android {
