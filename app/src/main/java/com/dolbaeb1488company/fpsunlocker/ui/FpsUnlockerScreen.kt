@@ -89,6 +89,9 @@ fun FpsUnlockerScreen(
     hasWritePermission: Boolean,
     displayRefreshRate: Float,
     isServiceRunning: Boolean,
+    isShizukuAvailable: Boolean = false,
+    hasShizukuPermission: Boolean = false,
+    onRequestShizukuPermission: () -> Unit = {},
     onToggleFps: (Boolean) -> Unit,
     onSetCustomValue: (String) -> Unit,
     onToggleService: (Boolean) -> Unit,
@@ -132,7 +135,7 @@ fun FpsUnlockerScreen(
         }
 
         // Permission Banner
-        if (!hasWritePermission) {
+        if (!hasWritePermission && !hasShizukuPermission) {
             item {
                 Card(
                     modifier = Modifier
@@ -166,7 +169,25 @@ fun FpsUnlockerScreen(
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Button(
+                        
+                        if (isShizukuAvailable) {
+                            Button(
+                                onClick = { onRequestShizukuPermission() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("grant_via_shizuku_button")
+                            ) {
+                                Icon(Icons.Rounded.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.grant_via_shizuku), fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        OutlinedButton(
                             onClick = {
                                 val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
                                     data = Uri.parse("package:${context.packageName}")
@@ -174,9 +195,6 @@ fun FpsUnlockerScreen(
                                 }
                                 context.startActivity(intent)
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("grant_permission_button")

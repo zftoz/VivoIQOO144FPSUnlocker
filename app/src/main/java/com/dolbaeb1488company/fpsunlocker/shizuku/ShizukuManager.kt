@@ -170,11 +170,43 @@ object ShizukuManager {
     }
 
     /**
-     * Автоматически выдаёт приложению системные разрешения WRITE_SECURE_SETTINGS через Shizuku в 1 клик.
+     * Автоматически выдаёт приложению системные разрешения WRITE_SECURE_SETTINGS и WRITE_SETTINGS через Shizuku в 1 клик.
      */
     suspend fun grantWriteSecureSettings(context: Context): Result<String> {
         val pkg = context.packageName
         val cmd = "pm grant $pkg android.permission.WRITE_SECURE_SETTINGS && pm grant $pkg android.permission.WRITE_SETTINGS"
+        return execShellCommand(cmd)
+    }
+
+    /**
+     * Записывает настройку в System Settings через Shizuku с правами ADB (UID 2000).
+     */
+    suspend fun putSystemSetting(key: String, value: String): Result<String> {
+        val cmd = "settings put system $key \"$value\""
+        return execShellCommand(cmd)
+    }
+
+    /**
+     * Читает настройку из System Settings через Shizuku.
+     */
+    suspend fun getSystemSetting(key: String): Result<String> {
+        val cmd = "settings get system $key"
+        return execShellCommand(cmd)
+    }
+
+    /**
+     * Записывает настройку в Secure Settings через Shizuku.
+     */
+    suspend fun putSecureSetting(key: String, value: String): Result<String> {
+        val cmd = "settings put secure $key \"$value\""
+        return execShellCommand(cmd)
+    }
+
+    /**
+     * Записывает настройку в Global Settings через Shizuku.
+     */
+    suspend fun putGlobalSetting(key: String, value: String): Result<String> {
+        val cmd = "settings put global $key \"$value\""
         return execShellCommand(cmd)
     }
 }

@@ -124,10 +124,26 @@ class MainActivity : ComponentActivity() {
         isShizukuAvailable = ShizukuManager.isShizukuAvailable()
         hasShizukuPermission = ShizukuManager.hasPermission()
 
+        // Если при запуске Shizuku уже авторизован, автоматически выдаем недостающие права
+        if (hasShizukuPermission && !hasWritePermission) {
+            lifecycleScope.launch {
+                ShizukuManager.grantWriteSecureSettings(this@MainActivity)
+                checkPermissions()
+                readSystemSettings()
+            }
+        }
+
         ShizukuManager.registerListeners(
             onBinderReceived = {
                 isShizukuAvailable = true
                 hasShizukuPermission = ShizukuManager.hasPermission()
+                if (hasShizukuPermission && !hasWritePermission) {
+                    lifecycleScope.launch {
+                        ShizukuManager.grantWriteSecureSettings(this@MainActivity)
+                        checkPermissions()
+                        readSystemSettings()
+                    }
+                }
             },
             onBinderDead = {
                 isShizukuAvailable = false
@@ -136,7 +152,7 @@ class MainActivity : ComponentActivity() {
             onPermissionResult = { granted ->
                 hasShizukuPermission = granted
                 if (granted) {
-                    Toast.makeText(this, "Shizuku: ADB доступ получен!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Shizuku: ADB доступ получен, выдаём права...", Toast.LENGTH_SHORT).show()
                     lifecycleScope.launch {
                         ShizukuManager.grantWriteSecureSettings(this@MainActivity)
                         checkPermissions()
@@ -166,6 +182,13 @@ class MainActivity : ComponentActivity() {
         readSystemSettings()
         isShizukuAvailable = ShizukuManager.isShizukuAvailable()
         hasShizukuPermission = ShizukuManager.hasPermission()
+        if (hasShizukuPermission && !hasWritePermission) {
+            lifecycleScope.launch {
+                ShizukuManager.grantWriteSecureSettings(this@MainActivity)
+                checkPermissions()
+                readSystemSettings()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -247,6 +270,7 @@ class MainActivity : ComponentActivity() {
 
     private fun applyCustomFpsSetting(targetValue: String) {
         try {
+            // Попытка 1: штатная запись в системные настройки (если есть WRITE_SETTINGS)
             Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_FPS_INTERPOLATION, targetValue)
             currentRawValue = targetValue
             is144Enabled = (targetValue == OriginSettingsConstants.VALUE_144_FORCE)
@@ -259,8 +283,27 @@ class MainActivity : ComponentActivity() {
                 Log.w("FPSUnlocker", "Service refresh warning", e)
             }
         } catch (e: Exception) {
-            Log.e("FPSUnlocker", "Failed to write setting: ${e.message}", e)
-            Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            Log.w("FPSUnlocker", "Standard write failed, trying Shizuku directly: ${e.message}")
+            // Попытка 2: Прямая запись через Shizuku (ADB UID 2000)
+            if (hasShizukuPermission) {
+                lifecycleScope.launch {
+                    val result = ShizukuManager.putSystemSetting(OriginSettingsConstants.SETTING_FPS_INTERPOLATION, targetValue)
+                    if (result.isSuccess) {
+                        currentRawValue = targetValue
+                        is144Enabled = (targetValue == OriginSettingsConstants.VALUE_144_FORCE)
+                        Toast.makeText(this@MainActivity, "OriginOS Setting Applied via Shizuku: $targetValue", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Ошибка Shizuku: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else if (isShizukuAvailable) {
+                // Сервер Shizuku есть, но права еще не запрошены — запрашиваем диалог автоматически
+                Toast.makeText(this, "Запрос авторизации Shizuku...", Toast.LENGTH_SHORT).show()
+                requestShizukuAuth()
+            } else {
+                Log.e("FPSUnlocker", "Failed to write setting: ${e.message}", e)
+                Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -272,8 +315,19 @@ class MainActivity : ComponentActivity() {
             Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_MUSIC_WIDGET, newValue)
             Toast.makeText(this, "Music Apps List Saved", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Log.e("FPSUnlocker", "Music Save err: ${e.message}")
-            Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            Log.w("FPSUnlocker", "Standard music save failed, attempting Shizuku: ${e.message}")
+            if (hasShizukuPermission) {
+                lifecycleScope.launch {
+                    val result = ShizukuManager.putSystemSetting(OriginSettingsConstants.SETTING_MUSIC_WIDGET, newValue)
+                    if (result.isSuccess) {
+                        Toast.makeText(this@MainActivity, "Music Apps Saved via Shizuku", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -285,8 +339,19 @@ class MainActivity : ComponentActivity() {
             Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_FP_ICON, newValue)
             Toast.makeText(this, "Fingerprint Icons Saved", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Log.e("FPSUnlocker", "FP Save err: ${e.message}")
-            Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            Log.w("FPSUnlocker", "Standard FP save failed, attempting Shizuku: ${e.message}")
+            if (hasShizukuPermission) {
+                lifecycleScope.launch {
+                    val result = ShizukuManager.putSystemSetting(OriginSettingsConstants.SETTING_FP_ICON, newValue)
+                    if (result.isSuccess) {
+                        Toast.makeText(this@MainActivity, "Fingerprint Icons Saved via Shizuku", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+            }
         }
     }
 

@@ -38,6 +38,7 @@
     <string name="permission_missing">Permission Required</string>
     <string name="permission_banner_desc">Grant \"Modify System Settings\" to allow this app to write OriginOS frame rates and widget keys.</string>
     <string name="grant_permission">Grant Permission</string>
+    <string name="grant_via_shizuku">Auto-Grant via Shizuku</string>
     <string name="permission_denied">Permission denied (WRITE_SETTINGS). Please grant permission in settings.</string>
     
     <!-- Customization / Tweaks -->
