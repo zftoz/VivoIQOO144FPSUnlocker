@@ -1,13 +1,51 @@
 <resources>
     <string name="app_name">OriginOS Tweaks</string>
-    <string name="unlocker">Разблокировщик</string>
-    <string name="tweaks">Настройки</string>
-    <string name="fps_unlock_title">РАЗБЛОКИРОВКА 144 FPS</string>
+    <string name="app_tagline">144 FPS и кастомизация для Vivo / iQOO</string>
+    
+    <!-- Navigation -->
+    <string name="nav_unlocker">144 FPS</string>
+    <string name="nav_tweaks">Твики</string>
+    <string name="nav_tools">ADB и Утилиты</string>
+    <string name="nav_device">Устройство</string>
+    
+    <!-- FPS Unlocker Screen -->
+    <string name="fps_unlock_title">Интерполяция 144 FPS</string>
+    <string name="fps_unlock_desc">Разблокировка интерполяции кадров MEMC 144 FPS в OriginOS и FuntouchOS</string>
+    <string name="fps_status_active">144 FPS Включено</string>
+    <string name="fps_status_inactive">Стандартный режим 60–120 FPS</string>
+    <string name="live_fps_monitor">Текущий FPS отрисовки</string>
+    <string name="display_refresh_rate">Частота экрана</string>
+    <string name="fps_label">кадров: %s</string>
     <string name="on">ВКЛ</string>
     <string name="off">ВЫКЛ</string>
-    <string name="fps_label">кадров: %s</string>
-    <string name="fingerprint_icons">Иконки отпечатка</string>
-    <string name="music_widget_apps">Приложения муз. виджета</string>
+    <string name="turn_on">Включить 144 FPS</string>
+    <string name="turn_off">Выключить 144 FPS</string>
+    
+    <!-- Presets -->
+    <string name="presets_title">Профили интерполяции</string>
+    <string name="preset_144">Принудительно 144 FPS (72->144)</string>
+    <string name="preset_120">120 FPS MEMC (60->120)</string>
+    <string name="preset_stock">Стандартный / По умолчанию</string>
+    <string name="preset_custom">Своё значение</string>
+    
+    <!-- Background Service -->
+    <string name="bg_service_title">Фоновая служба и плитка</string>
+    <string name="bg_service_desc">Поддерживать уведомление быстрого переключения в шторке</string>
+    
+    <!-- Permissions -->
+    <string name="permission_title">Права изменения настроек</string>
+    <string name="permission_granted">Разрешение предоставлено</string>
+    <string name="permission_missing">Требуется разрешение</string>
+    <string name="permission_banner_desc">Предоставьте право \"Изменение системных настроек\" для записи частоты кадров и виджетов OriginOS.</string>
+    <string name="grant_permission">Предоставить права</string>
+    <string name="permission_denied">Нет прав (WRITE_SETTINGS). Пожалуйста, разрешите изменение системных настроек.</string>
+    
+    <!-- Customization / Tweaks -->
+    <string name="tweaks_title">Кастомизация OriginOS</string>
+    <string name="music_widget_apps">Приложения музыкального виджета</string>
+    <string name="music_widget_desc">Добавление сторонних плееров в муз. виджет на экране блокировки и рабочем столе OriginOS</string>
+    <string name="fingerprint_icons">Кастомные иконки отпечатка</string>
+    <string name="fingerprint_desc">Ключи стилей и анимаций сканера отпечатка пальцев Vivo / iQOO</string>
     <string name="add_icon">Добавить иконку</string>
     <string name="edit_icon">Изменить иконку</string>
     <string name="delete_icon_title">Удалить иконку?</string>
@@ -18,12 +56,31 @@
     <string name="select_music_apps">Выберите приложения</string>
     <string name="add_selected">Добавить выбранные</string>
     <string name="add_apps">Добавить приложения</string>
-    <string name="permission_denied">Нет прав (WRITE_SETTINGS)?</string>
+    <string name="search_apps">Поиск приложений...</string>
+    <string name="no_apps_found">Приложения не найдены</string>
+    <string name="no_music_apps">Музыкальные приложения ещё не добавлены. Нажмите +, чтобы выбрать из установленных.</string>
+    <string name="no_fp_icons">Нет добавленных ключей иконок отпечатка.</string>
+    <string name="icon_identifier">Идентификатор / имя ресурса</string>
+    <string name="preset_fp_icons">Загрузить готовые пресеты</string>
+    
+    <!-- Notifications -->
     <string name="notification_title">OriginOS Tweaks Активен</string>
     <string name="notification_content">Статус 144 FPS: %s</string>
-    <string name="turn_on">Включить</string>
-    <string name="turn_off">Выключить</string>
+    
+    <!-- ADB & Tools -->
+    <string name="adb_guide_title">ADB и Root команды</string>
+    <string name="adb_guide_desc">Выполните команду через ADB или Shizuku для выдачи расширенных прав Secure Settings:</string>
+    <string name="copy_command">Скопировать команду</string>
+    <string name="command_copied">Команда скопирована в буфер обмена!</string>
+    <string name="battery_opt_title">Оптимизация батареи</string>
+    <string name="battery_opt_desc">Убедитесь, что служба не выгружается диспетчером задач OriginOS</string>
+    <string name="open_battery_settings">Отключить ограничения батареи</string>
+    <string name="links_title">Сообщество и исходный код</string>
+    <string name="open_github">Репозиторий GitHub</string>
+    <string name="open_telegram">Telegram сообщество</string>
+    
+    <!-- First run guide -->
     <string name="setup_guide_title">Важная настройка</string>
-    <string name="setup_guide_msg">Для стабильной работы в фоне, пожалуйста:\n1. Отключите ограничение потребления (Battery Optimization -> Don\'t optimize).\n2. Разрешите автозапуск и работу в фоне в настройках приложения.</string>
+    <string name="setup_guide_msg">Для стабильной работы на устройствах Vivo / iQOO:\n1. Отключите ограничение потребления (Не оптимизировать).\n2. Разрешите автозапуск и фоновую активность в настройках OriginOS.</string>
     <string name="ok">Понятно</string>
 </resources>

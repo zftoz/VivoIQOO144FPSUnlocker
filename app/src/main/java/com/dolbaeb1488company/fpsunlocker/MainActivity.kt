@@ -1,6 +1,5 @@
 package com.dolbaeb1488company.fpsunlocker
 
-import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,299 +10,273 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.TextView
+import android.view.Display
+import android.view.WindowManager
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
-import androidx.core.net.toUri
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.switchmaterial.SwitchMaterial
+import androidx.lifecycle.lifecycleScope
+import com.dolbaeb1488company.fpsunlocker.model.InstalledAppItem
+import com.dolbaeb1488company.fpsunlocker.model.OriginSettingsConstants
+import com.dolbaeb1488company.fpsunlocker.theme.OriginTweaksTheme
+import com.dolbaeb1488company.fpsunlocker.ui.MainScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var unlockerScreen: ConstraintLayout
-    private lateinit var customizationScreen: ConstraintLayout
-    private lateinit var adapter: CustomSquaresAdapter
-    private lateinit var musicAdapter: MusicAppsAdapter
-    private val squareList = mutableListOf<String>()
-    private val musicAppList = mutableListOf<String>()
+    private var is144Enabled by mutableStateOf(false)
+    private var currentRawValue by mutableStateOf("")
+    private var hasWritePermission by mutableStateOf(true)
+    private var displayRefreshRate by mutableFloatStateOf(120f)
+    private var supportedRefreshRates = mutableStateListOf<Float>()
+    private var isServiceRunning by mutableStateOf(false)
+    private var isFirstRun by mutableStateOf(false)
 
-    private val SETTING_FP_ICON = "light_cover_customize_fp_icon"
-    private val SETTING_MUSIC_WIDGET = "musicwidget_list_pkg_type_key"
-    private val SPLIT = "#split#"
+    private val musicAppsList = mutableStateListOf<String>()
+    private val fingerprintIconsList = mutableStateListOf<String>()
+    private val installedAppsList = mutableStateListOf<InstalledAppItem>()
 
     private val uiUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val isChecked = intent.getBooleanExtra("isChecked", false)
-            updateFpsSwitch(isChecked)
+            is144Enabled = isChecked
+            readSystemSettings()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        enableEdgeToEdge()
 
-        unlockerScreen = findViewById(R.id.unlocker_screen)
-        customizationScreen = findViewById(R.id.customization_screen)
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        isFirstRun = prefs.getBoolean("isFirstRun", true)
 
-        setupUnlocker()
-        setupCustomization()
-        setupNavigation()
-        checkFirstRun()
+        detectDisplayCapabilities()
+        readSystemSettings()
+        loadInstalledApps()
 
-        findViewById<ImageButton>(R.id.github_button).setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW,
-                "https://github.com/ewfawfasdf/VivoIQOO144FPSUnlocker/".toUri()))
+        // Start service if requested or enabled
+        try {
+            startService(Intent(this, FpsService::class.java))
+            isServiceRunning = true
+        } catch (e: Exception) {
+            Log.e("FPSUnlocker", "Failed to start FpsService", e)
         }
 
-        findViewById<ImageButton>(R.id.telegram_button).setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW,
-                "https://t.me/Idontcareaboutmyname".toUri()))
-        }
-
-        val filter = IntentFilter("com.dolbaeb1488company.fpsunlocker.UPDATE_UI")
+        val filter = IntentFilter(OriginSettingsConstants.ACTION_UPDATE_UI)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(uiUpdateReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(uiUpdateReceiver, filter)
         }
+
+        setContent {
+            OriginTweaksTheme {
+                MainScreen(
+                    is144Enabled = is144Enabled,
+                    currentRawValue = currentRawValue,
+                    hasWritePermission = hasWritePermission,
+                    displayRefreshRate = displayRefreshRate,
+                    supportedRefreshRates = supportedRefreshRates.toList(),
+                    isServiceRunning = isServiceRunning,
+                    musicApps = musicAppsList.toList(),
+                    fingerprintIcons = fingerprintIconsList.toList(),
+                    installedApps = installedAppsList.toList(),
+                    isFirstRun = isFirstRun,
+                    onDismissFirstRun = {
+                        isFirstRun = false
+                        prefs.edit { putBoolean("isFirstRun", false) }
+                    },
+                    onToggleFps = { enable -> toggleFpsSetting(enable) },
+                    onSetCustomValue = { value -> applyCustomFpsSetting(value) },
+                    onToggleService = { enable -> toggleBackgroundService(enable) },
+                    onRefreshPermission = { checkPermissions() },
+                    onSaveMusicApps = { list -> saveMusicApps(list) },
+                    onSaveFingerprintIcons = { list -> saveFingerprintIcons(list) }
+                )
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkPermissions()
+        readSystemSettings()
     }
 
     override fun onDestroy() {
-        unregisterReceiver(uiUpdateReceiver)
+        try {
+            unregisterReceiver(uiUpdateReceiver)
+        } catch (e: Exception) {
+            Log.w("FPSUnlocker", "Receiver not registered or already unregistered", e)
+        }
         super.onDestroy()
     }
 
-    private fun checkFirstRun() {
-        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        if (prefs.getBoolean("isFirstRun", true)) {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.setup_guide_title)
-                .setMessage(R.string.setup_guide_msg)
-                .setPositiveButton(R.string.ok) { _, _ ->
-                    prefs.edit { putBoolean("isFirstRun", false) }
-                }
-                .setCancelable(false)
-                .show()
+    private fun checkPermissions() {
+        hasWritePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.System.canWrite(this)
+        } else {
+            true
         }
     }
 
-    private fun setupNavigation() {
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
-        bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_unlocker -> {
-                    unlockerScreen.visibility = View.VISIBLE
-                    customizationScreen.visibility = View.GONE
-                    findViewById<TextView>(R.id.subtitle_text).text = getString(R.string.unlocker)
-                    true
-                }
-                R.id.nav_customization -> {
-                    unlockerScreen.visibility = View.GONE
-                    customizationScreen.visibility = View.VISIBLE
-                    findViewById<TextView>(R.id.subtitle_text).text = getString(R.string.tweaks)
-                    loadSquares()
-                    loadMusicApps()
-                    adapter.notifyDataSetChanged()
-                    musicAdapter.updateData(musicAppList)
-                    true
-                }
-                else -> false
-            }
-        }
-        // Set initial subtitle
-        findViewById<TextView>(R.id.subtitle_text).text = getString(R.string.unlocker)
-    }
-
-    private fun setupUnlocker() {
-        val fpsSwitch = findViewById<SwitchMaterial>(R.id.fps_switch)
-        val currentValue = Settings.System.getString(contentResolver, "gamecube_frame_interpolation_for_sr")
-        val isChecked = currentValue == "1:1::72:144"
-        
-        updateFpsSwitch(isChecked)
-
-        fpsSwitch.setOnCheckedChangeListener { _, checked ->
-            setSystemSetting(checked)
-        }
-        
-        // Ensure service is running
-        startService(Intent(this, FpsService::class.java))
-    }
-
-    private fun updateFpsSwitch(isChecked: Boolean) {
-        val fpsSwitch = findViewById<SwitchMaterial>(R.id.fps_switch)
-        val valueText = findViewById<TextView>(R.id.value_text)
-        val onLabel = findViewById<TextView>(R.id.on_label)
-        val offLabel = findViewById<TextView>(R.id.off_label)
-
-        fpsSwitch.isChecked = isChecked
-        valueText.text = getString(R.string.fps_label, if (isChecked) "144" else "0-120")
-        onLabel.setTextColor(if (isChecked) "#34D399".toColorInt() else "#6B7280".toColorInt())
-        offLabel.setTextColor(if (isChecked) "#6B7280".toColorInt() else "#34D399".toColorInt())
-    }
-
-    private fun setSystemSetting(isChecked: Boolean) {
+    private fun detectDisplayCapabilities() {
         try {
-            Settings.System.putString(contentResolver, "gamecube_frame_interpolation_for_sr", if (isChecked) "1:1::72:144" else "0:-1:0:0:0")
-            updateFpsSwitch(isChecked)
-            
-            // Notification update will happen in service if it reacts to setting change or if we trigger it
-            // Re-triggering buildNotification by notifying the service
-            startService(Intent(this, FpsService::class.java))
-            
+            val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                wm.defaultDisplay
+            }
+
+            if (display != null) {
+                displayRefreshRate = display.refreshRate
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val modes = display.supportedModes
+                    val rates = modes.map { it.refreshRate }.distinct().sorted()
+                    supportedRefreshRates.clear()
+                    supportedRefreshRates.addAll(rates)
+                }
+            }
         } catch (e: Exception) {
-            Log.e("FPSUnlocker", "err: ${e.message}", e)
-            Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
-            updateFpsSwitch(!isChecked)
+            Log.e("FPSUnlocker", "Error detecting display", e)
         }
     }
 
-    private fun setupCustomization() {
-        val recyclerView = findViewById<RecyclerView>(R.id.squares_recycler)
-        val musicRecyclerView = findViewById<RecyclerView>(R.id.music_apps_recycler)
-        findViewById<FloatingActionButton>(R.id.add_square_fab).visibility = View.GONE
+    private fun readSystemSettings() {
+        checkPermissions()
+        try {
+            val fpsVal = Settings.System.getString(contentResolver, OriginSettingsConstants.SETTING_FPS_INTERPOLATION) ?: ""
+            currentRawValue = fpsVal
+            is144Enabled = (fpsVal == OriginSettingsConstants.VALUE_144_FORCE)
 
-        loadSquares()
-        loadMusicApps()
-
-        adapter = CustomSquaresAdapter(squareList,
-            onItemClick = { index, value -> showEditDialog(index, value) },
-            onItemLongClick = { index -> showDeleteDialog(index) },
-            onAddClick = { showEditDialog(-1, "") }
-        )
-        recyclerView.adapter = adapter
-
-        musicAdapter = MusicAppsAdapter(packageManager, 
-            onRemoveClick = { index ->
-                musicAppList.removeAt(index)
-                musicAdapter.updateData(musicAppList)
-                saveMusicApps()
-            },
-            onAddClick = { showAppPickerDialog() }
-        )
-        musicRecyclerView.adapter = musicAdapter
-        musicAdapter.updateData(musicAppList)
-    }
-
-    private fun loadSquares() {
-        val rawValue = Settings.System.getString(contentResolver, SETTING_FP_ICON) ?: ""
-        squareList.clear()
-        if (rawValue.isNotEmpty()) {
-            val parts = rawValue.split(SPLIT).filter { it.isNotEmpty() }
-            squareList.addAll(parts)
-        }
-    }
-
-    private fun loadMusicApps() {
-        val rawValue = Settings.System.getString(contentResolver, SETTING_MUSIC_WIDGET) ?: ""
-        musicAppList.clear()
-        if (rawValue.isNotEmpty()) {
-            try {
-                val cleaned = rawValue.removePrefix("[").removeSuffix("]")
+            // Read Music Apps
+            val musicRaw = Settings.System.getString(contentResolver, OriginSettingsConstants.SETTING_MUSIC_WIDGET) ?: ""
+            musicAppsList.clear()
+            if (musicRaw.isNotBlank()) {
+                val cleaned = musicRaw.removePrefix("[").removeSuffix("]")
                 if (cleaned.isNotEmpty()) {
                     val parts = cleaned.split(",").map { it.trim().removeSurrounding("\"") }
-                    musicAppList.addAll(parts.filter { it.isNotEmpty() })
+                    musicAppsList.addAll(parts.filter { it.isNotEmpty() })
                 }
-            } catch (e: Exception) {
-                Log.e("FPSUnlocker", "Music parse err: ${e.message}")
             }
+
+            // Read FP Icons
+            val fpRaw = Settings.System.getString(contentResolver, OriginSettingsConstants.SETTING_FP_ICON) ?: ""
+            fingerprintIconsList.clear()
+            if (fpRaw.isNotBlank()) {
+                val parts = fpRaw.split(OriginSettingsConstants.SPLIT_FP).filter { it.isNotEmpty() }
+                fingerprintIconsList.addAll(parts)
+            }
+        } catch (e: Exception) {
+            Log.e("FPSUnlocker", "Error reading settings: ${e.message}")
         }
     }
 
-    private fun saveSquares() {
-        val newValue = if (squareList.isEmpty()) "" else squareList.joinToString(SPLIT) + SPLIT
+    private fun toggleFpsSetting(enable: Boolean) {
+        val targetValue = if (enable) OriginSettingsConstants.VALUE_144_FORCE else OriginSettingsConstants.VALUE_STOCK
+        applyCustomFpsSetting(targetValue)
+    }
+
+    private fun applyCustomFpsSetting(targetValue: String) {
         try {
-            Settings.System.putString(contentResolver, SETTING_FP_ICON, newValue)
+            Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_FPS_INTERPOLATION, targetValue)
+            currentRawValue = targetValue
+            is144Enabled = (targetValue == OriginSettingsConstants.VALUE_144_FORCE)
+            Toast.makeText(this, "OriginOS Setting Applied: $targetValue", Toast.LENGTH_SHORT).show()
+
+            // Update service notification
+            try {
+                startService(Intent(this, FpsService::class.java))
+            } catch (e: Exception) {
+                Log.w("FPSUnlocker", "Service refresh warning", e)
+            }
         } catch (e: Exception) {
-            Log.e("FPSUnlocker", "Save err: ${e.message}")
+            Log.e("FPSUnlocker", "Failed to write setting: ${e.message}", e)
             Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun saveMusicApps() {
-        val newValue = musicAppList.joinToString(separator = "\",\"", prefix = "[\"", postfix = "\"]")
-        val finalValue = if (musicAppList.isEmpty()) "[]" else newValue
+    private fun saveMusicApps(list: List<String>) {
+        musicAppsList.clear()
+        musicAppsList.addAll(list)
+        val newValue = if (list.isEmpty()) "[]" else list.joinToString(separator = "\",\"", prefix = "[\"", postfix = "\"]")
         try {
-            Settings.System.putString(contentResolver, SETTING_MUSIC_WIDGET, finalValue)
+            Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_MUSIC_WIDGET, newValue)
+            Toast.makeText(this, "Music Apps List Saved", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e("FPSUnlocker", "Music Save err: ${e.message}")
             Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun showAppPickerDialog() {
-        val pm = packageManager
-        val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        val appItems = installedApps
-            .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || it.packageName.contains("music") }
-            .map { AppItem(it, it.loadLabel(pm).toString(), musicAppList.contains(it.packageName)) }
-            .sortedBy { it.name }
-
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_app_picker, null)
-        val rv = view.findViewById<RecyclerView>(R.id.picker_recycler)
-        val pickerAdapter = AppPickerAdapter(pm, appItems)
-        rv.layoutManager = LinearLayoutManager(this)
-        rv.adapter = pickerAdapter
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.select_music_apps)
-            .setView(view)
-            .setPositiveButton(R.string.add_selected) { _, _ ->
-                val selected = pickerAdapter.getSelectedPackages()
-                musicAppList.clear()
-                musicAppList.addAll(selected)
-                musicAdapter.updateData(musicAppList)
-                saveMusicApps()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+    private fun saveFingerprintIcons(list: List<String>) {
+        fingerprintIconsList.clear()
+        fingerprintIconsList.addAll(list)
+        val newValue = if (list.isEmpty()) "" else list.joinToString(OriginSettingsConstants.SPLIT_FP) + OriginSettingsConstants.SPLIT_FP
+        try {
+            Settings.System.putString(contentResolver, OriginSettingsConstants.SETTING_FP_ICON, newValue)
+            Toast.makeText(this, "Fingerprint Icons Saved", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e("FPSUnlocker", "FP Save err: ${e.message}")
+            Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+        }
     }
 
-    private fun showEditDialog(index: Int, currentValue: String) {
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_value, null)
-        val editText = view.findViewById<EditText>(R.id.edit_value)
-        editText.setText(currentValue)
+    private fun toggleBackgroundService(enable: Boolean) {
+        isServiceRunning = enable
+        if (enable) {
+            try {
+                startService(Intent(this, FpsService::class.java))
+                Toast.makeText(this, "Service Started", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("FPSUnlocker", "Could not start service", e)
+            }
+        } else {
+            try {
+                stopService(Intent(this, FpsService::class.java))
+                Toast.makeText(this, "Service Stopped", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("FPSUnlocker", "Could not stop service", e)
+            }
+        }
+    }
 
-        AlertDialog.Builder(this)
-            .setTitle(if (index == -1) R.string.add_icon else R.string.edit_icon)
-            .setView(view)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val newValue = editText.text.toString()
-                if (newValue.isNotEmpty()) {
-                    if (index == -1) {
-                        squareList.add(newValue)
-                    } else {
-                        squareList[index] = newValue
-                    }
-                    adapter.notifyDataSetChanged()
-                    saveSquares()
+    private fun loadInstalledApps() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val pm = packageManager
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            val mapped = apps
+                .map { info ->
+                    val label = info.loadLabel(pm).toString()
+                    val icon = try { info.loadIcon(pm) } catch (e: Exception) { null }
+                    val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    InstalledAppItem(
+                        packageName = info.packageName,
+                        label = label,
+                        icon = icon,
+                        isSystem = isSystem,
+                        isSelected = musicAppsList.contains(info.packageName)
+                    )
                 }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
+                .sortedBy { it.label.lowercase() }
 
-    private fun showDeleteDialog(index: Int) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_icon_title)
-            .setMessage(R.string.delete_icon_msg)
-            .setPositiveButton(R.string.delete) { _, _ ->
-                squareList.removeAt(index)
-                adapter.notifyDataSetChanged()
-                saveSquares()
+            withContext(Dispatchers.Main) {
+                installedAppsList.clear()
+                installedAppsList.addAll(mapped)
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        }
     }
 }

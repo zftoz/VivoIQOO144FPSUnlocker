@@ -1,13 +1,51 @@
 <resources>
     <string name="app_name">OriginOS Tweaks</string>
-    <string name="unlocker">Unlocker</string>
-    <string name="tweaks">Tweaks</string>
-    <string name="fps_unlock_title">144 FPS UNLOCK</string>
+    <string name="app_tagline">144 FPS &amp; System Customization for Vivo / iQOO</string>
+    
+    <!-- Navigation -->
+    <string name="nav_unlocker">FPS Unlock</string>
+    <string name="nav_tweaks">Tweaks</string>
+    <string name="nav_tools">ADB &amp; Tools</string>
+    <string name="nav_device">Device</string>
+    
+    <!-- FPS Unlocker Screen -->
+    <string name="fps_unlock_title">144 FPS Frame Interpolation</string>
+    <string name="fps_unlock_desc">Unlock 144 FPS MEMC frame interpolation on OriginOS and FuntouchOS</string>
+    <string name="fps_status_active">144 FPS Unlocked</string>
+    <string name="fps_status_inactive">Standard 60–120 FPS</string>
+    <string name="live_fps_monitor">Live Rendering FPS</string>
+    <string name="display_refresh_rate">Display Refresh Rate</string>
+    <string name="fps_label">FPS: %s</string>
     <string name="on">ON</string>
     <string name="off">OFF</string>
-    <string name="fps_label">fps: %s</string>
-    <string name="fingerprint_icons">Fingerprint Icons</string>
-    <string name="music_widget_apps">Music Widget Apps</string>
+    <string name="turn_on">Enable 144 FPS</string>
+    <string name="turn_off">Disable 144 FPS</string>
+    
+    <!-- Presets -->
+    <string name="presets_title">Interpolation Presets</string>
+    <string name="preset_144">144 FPS Force (72->144)</string>
+    <string name="preset_120">120 FPS MEMC (60->120)</string>
+    <string name="preset_stock">Stock / Default</string>
+    <string name="preset_custom">Custom Value</string>
+    
+    <!-- Background Service -->
+    <string name="bg_service_title">Persistent Quick Tile Service</string>
+    <string name="bg_service_desc">Keep background service active with status bar toggle notification</string>
+    
+    <!-- Permissions -->
+    <string name="permission_title">Write Settings Permission</string>
+    <string name="permission_granted">Permission Granted</string>
+    <string name="permission_missing">Permission Required</string>
+    <string name="permission_banner_desc">Grant \"Modify System Settings\" to allow this app to write OriginOS frame rates and widget keys.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="permission_denied">Permission denied (WRITE_SETTINGS). Please grant permission in settings.</string>
+    
+    <!-- Customization / Tweaks -->
+    <string name="tweaks_title">OriginOS System Customization</string>
+    <string name="music_widget_apps">Music Widget Supported Apps</string>
+    <string name="music_widget_desc">Add third-party music players to the OriginOS lock screen &amp; desktop music widget</string>
+    <string name="fingerprint_icons">Fingerprint Custom Icons</string>
+    <string name="fingerprint_desc">Custom icon keys for Vivo / iQOO under-display fingerprint animation</string>
     <string name="add_icon">Add Icon</string>
     <string name="edit_icon">Edit Icon</string>
     <string name="delete_icon_title">Delete Icon?</string>
@@ -18,12 +56,31 @@
     <string name="select_music_apps">Select Music Apps</string>
     <string name="add_selected">Add Selected</string>
     <string name="add_apps">Add Apps</string>
-    <string name="permission_denied">Permission denied (WRITE_SETTINGS)?</string>
+    <string name="search_apps">Search applications...</string>
+    <string name="no_apps_found">No apps found</string>
+    <string name="no_music_apps">No music apps configured yet. Tap + to add installed apps.</string>
+    <string name="no_fp_icons">No custom fingerprint icon keys added.</string>
+    <string name="icon_identifier">Icon Identifier / Resource Name</string>
+    <string name="preset_fp_icons">Load Built-in Presets</string>
+    
+    <!-- Notifications -->
     <string name="notification_title">OriginOS Tweaks Active</string>
     <string name="notification_content">144 FPS Status: %s</string>
-    <string name="turn_on">Turn ON</string>
-    <string name="turn_off">Turn OFF</string>
+    
+    <!-- ADB & Tools -->
+    <string name="adb_guide_title">ADB &amp; Root Permissions</string>
+    <string name="adb_guide_desc">Execute this command via ADB or Shizuku to grant Secure Settings access:</string>
+    <string name="copy_command">Copy Command</string>
+    <string name="command_copied">Command copied to clipboard!</string>
+    <string name="battery_opt_title">Battery Optimization</string>
+    <string name="battery_opt_desc">Ensure background service is not killed by OriginOS task manager</string>
+    <string name="open_battery_settings">Disable Battery Restrictions</string>
+    <string name="links_title">Community &amp; Source</string>
+    <string name="open_github">GitHub Repository</string>
+    <string name="open_telegram">Telegram Community</string>
+    
+    <!-- First run guide -->
     <string name="setup_guide_title">Important Setup</string>
-    <string name="setup_guide_msg">For stable background operation, please:\n1. Disable battery optimization (Battery Optimization -> Don\'t optimize).\n2. Allow autostart and background activity in app settings.</string>
-    <string name="ok">OK</string>
+    <string name="setup_guide_msg">For stable background operation on Vivo / iQOO devices:\n1. Disable battery optimization (Don\'t optimize).\n2. Allow autostart and background activity in OriginOS app management.</string>
+    <string name="ok">Got it</string>
 </resources>

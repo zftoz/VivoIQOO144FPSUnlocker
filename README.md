@@ -33,6 +33,14 @@
 4. Соберите APK и установите на устройство
 
 
+## Автоматическая сборка через GitHub Actions
+
+В репозитории настроен GitHub Actions workflow (`.github/workflows/build_apk.yml`):
+- **При каждом коммите/пуше в ветку `main` или `master`** автоматически запускается сборка APK (Debug и Release).
+- **Ручной запуск**: Перейдите во вкладку **Actions** в вашем репозитории на GitHub -> выберите workflow **"Build and Package APK"** -> нажмите **"Run workflow"**.
+- **Скачивание собранного APK**: После завершения сборки перейдите в запущенный workflow и в блоке **Artifacts** скачайте архив `VivoIQOO144FPSUnlocker-APKs` с готовыми файлами `.apk`.
+- **Релизы**: При создании тега (например, `v2.0`) или публикации релиза APK автоматически прикрепляются к GitHub Releases.
+
 ## Разрешения
 - `android.permission.WRITE_SETTINGS` - изменение системных настроек
 
